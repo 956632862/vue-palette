@@ -1,15 +1,17 @@
 <template>
   <div id="app" class="app_">
-<!--    <palette/>-->
+    <div>
+      <palette/>
+    </div>
   </div>
 </template>
 
 <script>
-// import palette from "@/components/palette";
+import palette from "@/components/palette";
 export default {
   name: 'App',
   components: {
-      // palette
+      palette
   }
 }
 </script>

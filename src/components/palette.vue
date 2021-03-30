@@ -4,43 +4,66 @@
       <!--  画板-->
       <div class="canvas-container">
           <canvas
-              width="740"
-              height="600"
+              :width="760"
+              :height="610"
               ref="myPalette"
               class="palette"
               @mousedown="handleDownCanvas"
-              @mouseup="handleUpCanvas"
+              @mouseup="handleOverMove"
               @mousemove="handleMove"
+              @mouseout="handleOverMove"
           />
       </div>
 
       <div>
         鼠标坐标x: {{movex}}y:{{movey}}
       </div>
+
+      <div class="container-item">
+        <button class="button-item" @click="handlePre">上一步</button>
+        <button class="button-item" @click="handleNext">下一步</button>
+        <button class="button-item" @click="handleSetImg">选择图片</button>
+      </div>
+
       <div class="container-item">
         <h4>画笔颜色</h4>
-        <div class="color-item" v-for="(item,index) in colors" :style="{'background':item}" :key="index"></div>
+        <span
+            class="color-item"
+            v-for="(item,index) in colors"
+            :style="{'background':item}"
+            @click="handleSetColor(item)"
+            :key="index"
+        />
       </div>
 
       <div class="container-item">
         <h4>画笔大小</h4>
-        <div class="color-item" v-for="(item,index) in colors" :style="{'background':item}" :key="index"></div>
+        <div class="size-item" v-for="(item,index) in size" :key="index" @click="handleSetSize(item.size)">{{item.name}}</div>
       </div>
 
   </div>
 </template>
 
 <script>
+import mixin from "./mixin"
 export default {
   name: "palette",
+  mixins:[mixin],
   data(){
     return{
       // 画笔颜色
       colors:[
         '#f1d506','#0924de','#08e31e','#f32f15','#cccccc','#5ab639'
       ],
+      size:[
+        {name:"小",size:1},
+        {name:"中",size:2},
+        {name:"大",size:3}
+      ],
       // canvas对象
       context: {},
+      // 保存绘画的路径
+      lines:[],
       // 是否开始绘制
       canvasMoveUse: false,
       // 画笔的设置
@@ -63,29 +86,102 @@ export default {
     init(){
       const canvas = this.$refs.myPalette
       this.context = canvas.getContext("2d")
-    },
-    // 判断当前是否是pc
-    isPC(){
-      this.flag = navigator.userAgent.match(
-          /(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i
-      );
-      return this.flag === null
+      this.config.shadowColor = this.colors[0]
+      this.config.strokeStyle = this.colors[0]
     },
 
-    // 获取当前元素按下的坐标client是基于整个页面的坐标  offset是canvas距离顶部以及左边的距离
-    getEventXY(e){
-      console.log(e)
-      // 默认获取pc
-      let canvasX = e.offsetX
-      let canvasY = e.offsetY
-      this.movex =  canvasX
-      this.movey =  canvasY
-      // 使用手机的时候
-      if(!this.isPC()){
-        canvasX = e.changedTouches[0].clientX - e.target.parentNode.offsetLeft
-        canvasY = e.changedTouches[0].clientY - e.target.parentNode.offsetTop
+    // 结束绘画
+    handleOverMove(){
+      this.canvasMoveUse = false
+      // 往记录中添加短点
+      this.lines.push(null)
+    },
+
+    // 选择图片设置
+    handleSetImg(){
+      let input = document.createElement("input")
+      input.type = 'file'
+      input.accept = 'image/*'
+      input.onchange = this.putImageToCanvas
+      input.click()
+    },
+
+    putImageToCanvas(event){
+      const e = event.target;
+      const { files } = e; // 拿到所有的文件
+      const file = files[0]
+
+      let reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => {
+        // console.log('file 转 base64结果：' + reader.result)
+        let imag = new Image();
+        imag.src = reader.result
+        imag.onload = () =>{
+          // 获取canvas的宽高
+          const  {clientWidth,clientHeight} = this.$refs.myPalette
+
+          // 绘制之前还是需要将当前页面添加到上一步
+          this.preHandle.push(this.context.getImageData(0, 0, 760, 610))
+          // 这里没办法解决画图被覆盖的问题，只能绘制完图片之后将线条绘制回去
+          this.context.drawImage(imag,0,0,clientWidth,clientHeight)
+          this.resetLine()
+        }
       }
-      return {canvasX,canvasY}
+    },
+
+    // 重新绘制之前绘画
+    resetLine(){
+      this.context.beginPath();
+      // 这里是将绘制的记录返回回来，但是这里返回之后，就没法再进行上下了
+      this.lines.forEach((item,index) => {
+        // item === null 代表着抬起手指，断开绘制
+        if (item){
+          const next_item = this.lines[index+1] ||  item
+          this.context.moveTo(item.x,item.y);
+          this.context.lineTo(next_item.x,next_item.y);
+          this.context.strokeStyle=item.strokeStyle;
+          this.context.shadowColor=item.shadowColor
+          this.context.stroke();
+        }else{
+          // 清除子路径
+          console.log('清除子路径')
+          this.context.beginPath();
+        }
+      })
+    },
+
+    // 上一步
+    handlePre(){
+      if(!this.preHandle.length) return false
+      const pre =  this.preHandle.pop()
+      // 这里应该是把当前的canvas保存进下一步
+      const next = this.context.getImageData(0, 0, 760, 610)
+      this.nextHandle.push(next)
+      this.context.putImageData(pre,0, 0)
+    },
+
+    // 下一步
+    handleNext(){
+      if(!this.nextHandle.length) return false
+      const next = this.nextHandle.pop()
+      // 这里应该是把当前的canvas保存进下一步
+      const pre = this.context.getImageData(0, 0, 760, 610)
+      this.preHandle.push(pre)
+      this.context.putImageData(next,0, 0)
+    },
+
+    // 设置画笔的颜色
+    handleSetColor(color){
+      this.config.shadowColor = color
+      this.config.strokeStyle = color
+      this.handleSetConfig()
+    },
+
+    // 设置画笔大小
+    handleSetSize(size){
+      this.config.lineWidth = size
+      this.handleSetConfig()
     },
 
     // 设置画笔的配置
@@ -105,26 +201,39 @@ export default {
       this.handleSetConfig()
       //清除子路径
       this.context.beginPath()
-      // 移动的起点
-      console.log("当前设置的移动起点是x,y",canvasX,canvasY)
       this.context.moveTo(canvasX, canvasY)
       // 参数的值 x y width height
       const pre = this.context.getImageData(0, 0, 700, 600)
       // 记录当前操作，便于后续的撤销操作
       this.preHandle.push(pre)
+
+      // todo 重新绘画之后清除所有下一步，考虑是否合理
+      this.nextHandle = []
+
+      // 按下就保存路径位置
+      this.lines.push({
+        x:canvasX,
+        y:canvasY,
+        strokeStyle:this.context.strokeStyle,
+        shadowColor:this.context.shadowColor
+      })
     },
-    // 抬起
-    handleUpCanvas(){
-      this.canvasMoveUse = false
-      // console.log("抬起",e)
-    },
-    // 移动e
+
+
+    // 移动
     handleMove(e){
       if (!this.canvasMoveUse) return
       // 获取坐标点
       const {canvasX,canvasY} = this.getEventXY(e)
       // 链接每个点
       this.context.lineTo( canvasX ,canvasY)
+      // 按下就保存路径位置
+      this.lines.push({
+        x:canvasX,
+        y:canvasY,
+        strokeStyle:this.context.strokeStyle,
+        shadowColor:this.context.shadowColor
+      })
       //绘制已定义的路径
       this.context.stroke()
     }
@@ -133,12 +242,16 @@ export default {
 </script>
 
 <style scoped lang="scss">
-
+div,span{
+  -moz-user-select:none;/*火狐*/
+  -webkit-user-select:none;/*webkit浏览器*/
+  -ms-user-select:none;/*IE10*/
+  -khtml-user-select:none;/*早期浏览器*/
+  user-select:none;
+}
 .container{
   padding: 10px 0;
-
   .canvas-container{
-    border: 1px #585858 solid;
     .palette{
       background: #e2e2e2;
     }
@@ -149,12 +262,20 @@ export default {
     text-align: center;
   }
 
-  .color-item{
+  .button-item{
+    padding: 5px 10px;
+    margin: 5px;
+  }
+
+  .color-item,.size-item{
     display: inline-block;
     padding: 10px;
     width: 20px;
     height: 20px;
     margin: 5px;
+  }
+  .size-item{
+    border: 1px solid black;
   }
 }
 
