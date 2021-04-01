@@ -3,7 +3,8 @@
 
       <!--  画板-->
       <div class="canvas-container">
-          <canvas
+        <h3>画板</h3>
+        <canvas
               :width="760"
               :height="610"
               ref="myPalette"
@@ -13,6 +14,7 @@
               @mousemove="handleMove"
               @mouseout="handleOverMove"
           />
+          <img style="margin-left: 30px" :src="image" alt="">
       </div>
 
       <div>
@@ -23,6 +25,7 @@
         <button class="button-item" @click="handlePre">上一步</button>
         <button class="button-item" @click="handleNext">下一步</button>
         <button class="button-item" @click="handleSetImg">选择图片</button>
+        <button class="button-item" @click="createImage">生成图片</button>
       </div>
 
       <div class="container-item">
@@ -76,7 +79,8 @@ export default {
       preHandle:[],   // 上一步
       nextHandle:[],   // 下一步
       movex:0,
-      movey:0
+      movey:0,
+      image:null
     }
   },
   mounted() {
@@ -86,6 +90,12 @@ export default {
     init(){
       const canvas = this.$refs.myPalette
       this.context = canvas.getContext("2d")
+
+      // 填充默认背景颜色
+      this.context.fillStyle = "#8f8a8a"
+      this.context.fillRect(0,0,canvas.clientWidth,canvas.clientHeight)
+
+      // 默认都设置第一个
       this.config.shadowColor = this.colors[0]
       this.config.strokeStyle = this.colors[0]
     },
@@ -95,6 +105,11 @@ export default {
       this.canvasMoveUse = false
       // 往记录中添加短点
       this.lines.push(null)
+    },
+    // 生成图片
+    createImage(){
+      this.image = this.$refs.myPalette.toDataURL("image/png",1)
+      console.log("生成图片")
     },
 
     // 选择图片设置
@@ -120,7 +135,6 @@ export default {
         imag.onload = () =>{
           // 获取canvas的宽高
           const  {clientWidth,clientHeight} = this.$refs.myPalette
-
           // 绘制之前还是需要将当前页面添加到上一步
           this.preHandle.push(this.context.getImageData(0, 0, 760, 610))
           // 这里没办法解决画图被覆盖的问题，只能绘制完图片之后将线条绘制回去
@@ -206,7 +220,6 @@ export default {
       const pre = this.context.getImageData(0, 0, 700, 600)
       // 记录当前操作，便于后续的撤销操作
       this.preHandle.push(pre)
-
       // todo 重新绘画之后清除所有下一步，考虑是否合理
       this.nextHandle = []
 
@@ -253,7 +266,7 @@ div,span{
   padding: 10px 0;
   .canvas-container{
     .palette{
-      background: #e2e2e2;
+      //background: #e2e2e2;
     }
   }
 
