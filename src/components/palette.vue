@@ -67,6 +67,8 @@ export default {
       context: {},
       // 保存绘画的路径
       lines:[],
+      // 保存按下了上一步之后，储存下来的路线的数据
+      saveLines:[],
       // 是否开始绘制
       canvasMoveUse: false,
       // 画笔的设置
@@ -106,10 +108,10 @@ export default {
       // 往记录中添加短点
       this.lines.push(null)
     },
+
     // 生成图片
     createImage(){
       this.image = this.$refs.myPalette.toDataURL("image/png",1)
-      console.log("生成图片")
     },
 
     // 选择图片设置
@@ -159,7 +161,6 @@ export default {
           this.context.stroke();
         }else{
           // 清除子路径
-          console.log('清除子路径')
           this.context.beginPath();
         }
       })
@@ -168,10 +169,15 @@ export default {
     // 上一步
     handlePre(){
       if(!this.preHandle.length) return false
+      const preKey =  this.preHandle.length - 1
       const pre =  this.preHandle.pop()
       // 这里应该是把当前的canvas保存进下一步
       const next = this.context.getImageData(0, 0, 760, 610)
-      this.nextHandle.push(next)
+      // 修改结构为 当前的key,跟数据
+      const nextData = {preKey,data:next,lines:[]}
+      this.nextHandle.push(nextData)
+      // 删除对应的绘制路径
+      this.deleteLines(preKey)
       this.context.putImageData(pre,0, 0)
     },
 
@@ -182,7 +188,11 @@ export default {
       // 这里应该是把当前的canvas保存进下一步
       const pre = this.context.getImageData(0, 0, 760, 610)
       this.preHandle.push(pre)
-      this.context.putImageData(next,0, 0)
+      this.context.putImageData(next.data,0, 0)
+      // 将路径数据返回到lines里面
+      next.lines.forEach((item) => {
+        this.lines.push(item)
+      })
     },
 
     // 设置画笔的颜色
@@ -223,15 +233,18 @@ export default {
       // todo 重新绘画之后清除所有下一步，考虑是否合理
       this.nextHandle = []
 
+      // 添加到上一步操作的最后一步就是当前的key
+      const preKey = this.preHandle.length - 1
+
       // 按下就保存路径位置
       this.lines.push({
+        preKey,
         x:canvasX,
         y:canvasY,
         strokeStyle:this.context.strokeStyle,
         shadowColor:this.context.shadowColor
       })
     },
-
 
     // 移动
     handleMove(e){
