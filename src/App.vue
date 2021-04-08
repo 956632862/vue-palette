@@ -1,7 +1,7 @@
 <template>
   <div id="app" class="app_">
-    <div>
-      <palette/>
+    <div >
+      <palette class="test"/>
     </div>
   </div>
 </template>
@@ -20,6 +20,10 @@ export default {
 *{
   padding: 0;
   margin: 0;
+}
+.test{
+  width: 90vw;
+  height: 60vh;
 }
 .app_{
   display: flex;

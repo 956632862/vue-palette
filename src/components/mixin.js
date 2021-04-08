@@ -15,11 +15,10 @@ export default {
             this.movex =  canvasX
             this.movey =  canvasY
             // 使用手机的时候
+            // 使用手机的时候
             if(!this.isPC()){
-                canvasX = e.changedTouches[0].offsetX
-                canvasY = e.changedTouches[0].offsetY
-                // canvasX = e.changedTouches[0].clientX - e.target.parentNode.offsetLeft
-                // canvasY = e.changedTouches[0].clientY - e.target.parentNode.offsetTop
+                canvasX = e.changedTouches[0].clientX - e.target.parentNode.offsetLeft
+                canvasY = e.changedTouches[0].clientY - e.target.parentNode.offsetTop
             }
             return {canvasX,canvasY}
         },

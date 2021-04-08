@@ -2,26 +2,32 @@
   <div class="container">
 
       <!--  画板-->
-      <div class="canvas-container">
-        <h3>画板</h3>
+      <h3>画板</h3>
+      <div class="canvas-container" ref="canvasContainer">
         <canvas
-              :width="760"
-              :height="610"
-              ref="myPalette"
-              class="palette"
-              @mousedown="handleDownCanvas"
-              @mouseup="handleOverMove"
-              @mousemove="handleMove"
-              @mouseout="handleOverMove"
-          />
-          <img style="margin-left: 30px" :src="image" alt="">
+            ref="myPalette"
+            class="palette"
+            :width="css.width"
+            :height="css.height"
+            @mousedown="handleDownCanvas"
+            @mouseup="handleOverMove"
+            @mousemove="handleMove"
+            @mouseout="handleOverMove"
+            @touchstart="handleDownCanvas"
+            @touchmove="handleMove"
+            @touchcancel="handleOverMove"
+            @touchend="handleOverMove"
+        />
       </div>
 
       <div>
         鼠标坐标x: {{movex}}y:{{movey}}
       </div>
 
-      <div class="container-item">
+<!--    <img style="margin-left: 30px" :src="image" alt="">-->
+
+
+    <div class="container-item">
         <button class="button-item" @click="handlePre">上一步</button>
         <button class="button-item" @click="handleNext">下一步</button>
         <button class="button-item" @click="handleSetImg">选择图片</button>
@@ -63,6 +69,10 @@ export default {
         {name:"中",size:2},
         {name:"大",size:3}
       ],
+      css:{
+        width:0,
+        height:0
+      },
       // canvas对象
       context: {},
       // 保存绘画的路径
@@ -91,8 +101,15 @@ export default {
   methods:{
     init(){
       const canvas = this.$refs.myPalette
-      this.context = canvas.getContext("2d")
+      const canvas_box = this.$refs.canvasContainer
 
+      // 设置画布的宽高根据外层自动缩放
+      this.$nextTick(()=>{
+        this.css.width = canvas_box.clientWidth
+        this.css.height = canvas_box.clientHeight
+      })
+
+      this.context = canvas.getContext("2d")
       // 填充默认背景颜色
       this.context.fillStyle = "#8f8a8a"
       this.context.fillRect(0,0,canvas.clientWidth,canvas.clientHeight)
@@ -100,6 +117,7 @@ export default {
       // 默认都设置第一个
       this.config.shadowColor = this.colors[0]
       this.config.strokeStyle = this.colors[0]
+
     },
 
     // 结束绘画
@@ -218,6 +236,7 @@ export default {
 
     // 在canvas中按下鼠标
     handleDownCanvas(e){
+      e.preventDefault();
       this.canvasMoveUse = true
       // 获取当前鼠标按下的位置
       const {canvasX,canvasY} = this.getEventXY(e)
@@ -248,6 +267,7 @@ export default {
 
     // 移动
     handleMove(e){
+      e.preventDefault();
       if (!this.canvasMoveUse) return
       // 获取坐标点
       const {canvasX,canvasY} = this.getEventXY(e)
@@ -278,8 +298,11 @@ div,span{
 .container{
   padding: 10px 0;
   .canvas-container{
+    height: 100%;
+    width: 100%;
+    background: cornflowerblue;
     .palette{
-      //background: #e2e2e2;
+      background: #e2e2e2;
     }
   }
 
