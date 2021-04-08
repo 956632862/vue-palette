@@ -32,7 +32,8 @@
         <button class="button-item" @click="handleNext">下一步</button>
         <button class="button-item" @click="handleSetImg">选择图片</button>
         <button class="button-item" @click="createImage">生成图片</button>
-      </div>
+        <button class="button-item" @click="clearCanvas">清空画布</button>
+    </div>
 
       <div class="container-item">
         <h4>画笔颜色</h4>
@@ -92,7 +93,7 @@ export default {
       nextHandle:[],   // 下一步
       movex:0,
       movey:0,
-      image:null
+      image:null,
     }
   },
   mounted() {
@@ -119,7 +120,18 @@ export default {
       this.config.strokeStyle = this.colors[0]
 
     },
-
+    /**
+     * 清空画布，现在直接清空所有记录
+     * todo 下一步考虑做成可以完成清空之后 撤回，下一步，生成图片重新绘制等
+     */
+    clearCanvas(){
+      const  {clientWidth,clientHeight} = this.$refs.myPalette
+      this.context.clearRect(0,0,clientWidth,clientHeight);
+      this.lines = []
+      this.nextHandle = []
+      this.preHandle = []
+      this.saveLines = []
+    },
     // 结束绘画
     handleOverMove(){
       this.canvasMoveUse = false
@@ -156,10 +168,13 @@ export default {
           // 获取canvas的宽高
           const  {clientWidth,clientHeight} = this.$refs.myPalette
           // 绘制之前还是需要将当前页面添加到上一步
-          this.preHandle.push(this.context.getImageData(0, 0, 760, 610))
+          this.preHandle.push(this.context.getImageData(0, 0, clientWidth, clientHeight))
           // 这里没办法解决画图被覆盖的问题，只能绘制完图片之后将线条绘制回去
           this.context.drawImage(imag,0,0,clientWidth,clientHeight)
-          this.resetLine()
+          // 如果是清空状态的就不用绘制回去了
+          if (!this.clearStatus){
+            this.resetLine()
+          }
         }
       }
     },
@@ -190,7 +205,8 @@ export default {
       const preKey =  this.preHandle.length - 1
       const pre =  this.preHandle.pop()
       // 这里应该是把当前的canvas保存进下一步
-      const next = this.context.getImageData(0, 0, 760, 610)
+      const  {clientWidth,clientHeight} = this.$refs.myPalette
+      const next = this.context.getImageData(0, 0, clientWidth, clientHeight)
       // 修改结构为 当前的key,跟数据
       const nextData = {preKey,data:next,lines:[]}
       this.nextHandle.push(nextData)
@@ -204,7 +220,8 @@ export default {
       if(!this.nextHandle.length) return false
       const next = this.nextHandle.pop()
       // 这里应该是把当前的canvas保存进下一步
-      const pre = this.context.getImageData(0, 0, 760, 610)
+      const  {clientWidth,clientHeight} = this.$refs.myPalette
+      const pre = this.context.getImageData(0, 0, clientWidth, clientHeight)
       this.preHandle.push(pre)
       this.context.putImageData(next.data,0, 0)
       // 将路径数据返回到lines里面
@@ -237,6 +254,7 @@ export default {
     // 在canvas中按下鼠标
     handleDownCanvas(e){
       e.preventDefault();
+      this.clearStatus = false
       this.canvasMoveUse = true
       // 获取当前鼠标按下的位置
       const {canvasX,canvasY} = this.getEventXY(e)
@@ -246,7 +264,8 @@ export default {
       this.context.beginPath()
       this.context.moveTo(canvasX, canvasY)
       // 参数的值 x y width height
-      const pre = this.context.getImageData(0, 0, 700, 600)
+      const  {clientWidth,clientHeight} = this.$refs.myPalette
+      const pre = this.context.getImageData(0, 0, clientWidth, clientHeight)
       // 记录当前操作，便于后续的撤销操作
       this.preHandle.push(pre)
       // todo 重新绘画之后清除所有下一步，考虑是否合理
