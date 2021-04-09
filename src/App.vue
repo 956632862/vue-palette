@@ -11,7 +11,7 @@ import palette from "@/components/palette";
 export default {
   name: 'App',
   components: {
-      palette
+    palette
   }
 }
 </script>

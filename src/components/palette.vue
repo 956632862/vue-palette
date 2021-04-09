@@ -20,20 +20,22 @@
         />
       </div>
 
+      <div style="margin-top: 30px">
+        <p>生成的图片</p>
+        <img  :src="image" alt="">
+      </div>
+
       <div>
         鼠标坐标x: {{movex}}y:{{movey}}
       </div>
 
-<!--    <img style="margin-left: 30px" :src="image" alt="">-->
-
-
-    <div class="container-item">
-        <button class="button-item" @click="handlePre">上一步</button>
-        <button class="button-item" @click="handleNext">下一步</button>
-        <button class="button-item" @click="handleSetImg">选择图片</button>
-        <button class="button-item" @click="createImage">生成图片</button>
-        <button class="button-item" @click="clearCanvas">清空画布</button>
-    </div>
+      <div class="container-item">
+          <button class="button-item" @click="handlePre">上一步</button>
+          <button class="button-item" @click="handleNext">下一步</button>
+          <button class="button-item" @click="handleSetImg">选择图片</button>
+          <button class="button-item" @click="createImage">生成图片</button>
+          <button class="button-item" @click="clearCanvas">清空画布</button>
+      </div>
 
       <div class="container-item">
         <h4>画笔颜色</h4>
@@ -42,6 +44,16 @@
             v-for="(item,index) in colors"
             :style="{'background':item}"
             @click="handleSetColor(item)"
+            :key="index"
+        />
+      </div>
+      <div class="container-item">
+        <h4>背景颜色</h4>
+        <span
+            class="color-item"
+            v-for="(item,index) in colors"
+            :style="{'background':item}"
+            @click="changeBgColor(item)"
             :key="index"
         />
       </div>
@@ -94,6 +106,7 @@ export default {
       movex:0,
       movey:0,
       image:null,
+      background:"#000000"
     }
   },
   mounted() {
@@ -103,26 +116,37 @@ export default {
     init(){
       const canvas = this.$refs.myPalette
       const canvas_box = this.$refs.canvasContainer
+      this.context = canvas.getContext("2d")
 
       // 设置画布的宽高根据外层自动缩放
       this.$nextTick(()=>{
         this.css.width = canvas_box.clientWidth
         this.css.height = canvas_box.clientHeight
+        this.context.globalAlpha = 1
       })
-
-      this.context = canvas.getContext("2d")
-      // 填充默认背景颜色
-      this.context.fillStyle = "#8f8a8a"
-      this.context.fillRect(0,0,canvas.clientWidth,canvas.clientHeight)
 
       // 默认都设置第一个
       this.config.shadowColor = this.colors[0]
       this.config.strokeStyle = this.colors[0]
 
+      // 伪异步
+      setTimeout(()=>{
+        this.context.fillStyle = this.background
+        this.context.fillRect(0,0,canvas.clientWidth,canvas.clientHeight)
+      },0)
+    },
+    // 修改背景颜色
+    changeBgColor(item){
+      const canvas = this.$refs.myPalette
+      if (item){
+        this.background = item
+      }
+      this.context.fillStyle = this.background
+      this.context.fillRect(0,0,canvas.clientWidth,canvas.clientHeight)
+      this.resetLine()
     },
     /**
      * 清空画布，现在直接清空所有记录
-     * todo 下一步考虑做成可以完成清空之后 撤回，下一步，生成图片重新绘制等
      */
     clearCanvas(){
       const  {clientWidth,clientHeight} = this.$refs.myPalette
@@ -131,6 +155,7 @@ export default {
       this.nextHandle = []
       this.preHandle = []
       this.saveLines = []
+      this.changeBgColor()
     },
     // 结束绘画
     handleOverMove(){
@@ -319,10 +344,6 @@ div,span{
   .canvas-container{
     height: 100%;
     width: 100%;
-    background: cornflowerblue;
-    .palette{
-      background: #e2e2e2;
-    }
   }
 
   .container-item{
